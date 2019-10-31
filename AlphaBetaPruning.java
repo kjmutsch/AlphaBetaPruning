@@ -1,3 +1,4 @@
+package src;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,7 +12,9 @@ public class AlphaBetaPruning {
 	private int initialDepth;
 	private double branching = 0.0;
 	private double numBranched = 0.0;
-	
+	private double bestAlpha = Double.NEGATIVE_INFINITY;
+	private double bestBeta = Double.POSITIVE_INFINITY;
+	private Integer[] bestMove = {null};
 
     public AlphaBetaPruning() {
     }
@@ -21,7 +24,9 @@ public class AlphaBetaPruning {
      * as specified in the homework description.
      */
     public void printStats() {
-        System.out.println("Move: " + move);
+        System.out.println("Move: " + bestMove[0]);
+    	if(value == -0.0)
+    		value = 0.0;
     	System.out.println("Value: " + value);
     	System.out.println("Number of Nodes Visited: " + numVisited);
     	System.out.println("Number of Nodes Evaluated: " + numEvaluated);
@@ -40,16 +45,16 @@ public class AlphaBetaPruning {
     public void run(GameState state, int depth) {
     	initialDepth = depth;
     	minD = depth;
-		  int taken = 0;
-		  for(int i = 1; i <= state.getSize(); i++) {
-			  if(!state.getStone(i)) {
-				  taken += 1;
-			  }
-		  }
+		int taken = 0;
+		for(int i = 1; i <= state.getSize(); i++) {
+			if(!state.getStone(i)) {
+				taken += 1;
+			}
+		}
     	if(taken%2 == 0) {
     		this.value = alphabeta(state, depth, Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY, true);
     	} else {
-            this.value = -alphabeta(state, depth, Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY, true);
+            this.value = alphabeta(state, depth, Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY, false);
     	}
     }
 
@@ -63,14 +68,20 @@ public class AlphaBetaPruning {
      * @return int This is the number indicating score of the best next move
      */
     private double alphabeta(GameState state, int depth, double alpha, double beta, boolean maxPlayer) {
-    	return maxValue(state, depth, Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY, true);
+    	if(maxPlayer) {
+    		double max = maxValue(state, depth, Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY, true);
+    		return max;
+    	}
+    	else {
+        	double min= minValue(state, depth, Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY, false);
+    		return min;
+    	}
     }
     
     private double maxValue(GameState state, int depth, double alpha, double beta, boolean maxPlayer) {
     	numVisited += 1;
     	if(depth < minD)
     		minD = depth;
-		double currBest = Double.NEGATIVE_INFINITY;
 		if(state.getMoves().size() == 0 || depth == 0) {
 			if(depth == 0)
 				maxDepth = initialDepth;
@@ -88,27 +99,28 @@ public class AlphaBetaPruning {
 			branching+=1;
 	    	double check = minValue(i, depth - 1, alpha, beta, false);
 			v = Math.max(v, check);
-			if(check > currBest) {
-				currBest = check;
-				this.move = i.getLastMove();
-			}
 			if(v >= beta) {
 				return v;
 			}
 			alpha = Math.max(alpha, v);
+			if(depth == initialDepth && alpha > bestAlpha) {
+				bestAlpha = alpha;
+				bestMove[0] = i.getLastMove();
+			}
 		}
     	return v;
     }
     
     private double minValue(GameState state, int depth, double alpha, double beta, boolean maxPlayer) {
     	numVisited +=1;
-    	if(depth > maxDepth)
-    		maxDepth = depth;
+    	if(depth < minD)
+    		minD = depth;
 		if(state.getMoves().size() == 0 || depth == 0) {
-			if(depth == 0)
+			if(depth == 0) {
 				maxDepth = initialDepth;
-			else
+			} else {
 				maxDepth = initialDepth - minD;
+			}
 			numEvaluated += 1;
 			if(state.getMoves().isEmpty())
 				return 1.0;
@@ -119,12 +131,17 @@ public class AlphaBetaPruning {
 		numBranched += 1;
 		for(GameState i: actions) {
 			branching += 1;
-	    	double check = maxValue(i, depth -1, alpha, beta, true);
+	    	double check = maxValue(i, depth - 1, alpha, beta, true);
 			v = Math.min(v, check);
 			if(v <= alpha) {
 				return v;
 			}
 			beta = Math.min(beta,v);
+
+			if(depth == initialDepth && beta < bestBeta) {
+				bestBeta = beta;
+				bestMove[0] = i.getLastMove();
+			}
 		}
     	return v;
     }
